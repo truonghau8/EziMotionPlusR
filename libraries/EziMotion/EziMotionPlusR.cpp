@@ -606,3 +606,4 @@ char EziMotionPlusR::GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *d
 	free(buffer_out);
 	return data;
 }
+

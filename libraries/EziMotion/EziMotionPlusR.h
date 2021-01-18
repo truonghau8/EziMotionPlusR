@@ -61,13 +61,13 @@ class EziMotionPlusR
 		~EziMotionPlusR();
 		bool initServo();
 		char ServoEnable(uint8_t iSlaveNo, bool state); //da test
-		char ServoAlarmReset(uint8_t iSlaveNo);
-		char MoveStop(uint8_t iSlaveNo);
-		char EmergencyStop(uint8_t iSlaveNo);
+		char ServoAlarmReset(uint8_t iSlaveNo); //da test
+		char MoveStop(uint8_t iSlaveNo); //da test
+		char EmergencyStop(uint8_t iSlaveNo); //da test
 		char MoveOriginSingleAxis(uint8_t iSlaveNo); //da test
-		char MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps); 
-		char MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps); 
-		char MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog_dir);
+		char MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps); //da test
+		char MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps); //da test
+		char MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog_dir); //da test
 		char GetCommandPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt); 
 		char SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt); 
 		char GetActualPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt);

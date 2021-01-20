@@ -52,7 +52,7 @@ class EziMotionPlusR
 
 		bool encode(char *des, const char *source, const uint8_t length); //encode_buffer //da test
 		bool decode(char *des, const char *source, const uint8_t length); //decode_buffer //da test
-		bool processData(char *des, const char *source, const uint8_t length); //send data and after that it wait the data respond
+		bool processData(char *des, const char *source, const uint8_t length, bool useReturn = true); //send data and after that it wait the data respond
 		bool checkCRC(char *source, const uint8_t length); //encode_buffer
 		int timeRead();
 	public:
@@ -60,24 +60,23 @@ class EziMotionPlusR
 		EziMotionPlusR(SoftwareSerial& uart_ttl,int32_t dwbaud);
 		~EziMotionPlusR();
 		bool initServo();
-		char ServoEnable(uint8_t iSlaveNo, bool state); //da test
-		char ServoAlarmReset(uint8_t iSlaveNo); //da test
-		char MoveStop(uint8_t iSlaveNo); //da test
-		char EmergencyStop(uint8_t iSlaveNo); //da test
-		char MoveOriginSingleAxis(uint8_t iSlaveNo); //da test
-		char MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps); //da test
-		char MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps); //da test
-		char MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog_dir); //da test
+		char ServoEnable(uint8_t iSlaveNo, bool state, bool useReturn = true); //da test
+		char ServoAlarmReset(uint8_t iSlaveNo, bool useReturn = true); //da test
+		char MoveStop(uint8_t iSlaveNo, bool useReturn = true); //da test
+		char EmergencyStop(uint8_t iSlaveNo, bool useReturn = true); //da test
+		char MoveOriginSingleAxis(uint8_t iSlaveNo, bool useReturn = true); //da test
+		char MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps, bool useReturn = true); //da test
+		char MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps, bool useReturn = true); //da test
+		char MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog_dir, bool useReturn = true); //da test
 		char GetCommandPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt); 
-		char SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt); 
+		char SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt, bool useReturn = true); 
 		char GetActualPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt);
-		char SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt);
-		char ClearPosition(uint8_t iSlaveNo);
-		char SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t data_para);
+		char SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt, bool useReturn = true);
+		char ClearPosition(uint8_t iSlaveNo, bool useReturn = true);
+		char SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t data_para, bool useReturn = true);
 		char GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *data_para);
-		//
-		//set para -Acel time -- Decl time
-		//
+		char GetAxisStatus(uint8_t iSlaveNom, int32_t *data_para); //chua test
+
 };
 
 #endif

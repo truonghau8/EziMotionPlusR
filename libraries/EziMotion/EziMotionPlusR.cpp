@@ -69,7 +69,7 @@ int EziMotionPlusR::timeRead()
 	return -1; // -1 indicates timeout
 }
 
-bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t length)
+bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t length, bool useReturn = true)
 {
 	if (length <= 6)
 		return false;
@@ -84,16 +84,21 @@ bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t le
 	{
 		this->hwrSerial->write(source, length);
 		//
-
-		char buffer[256];
-		int c = this->timeRead();
-		char _length_buffer = 0;
-		while (c >= 0)
+		if (useReturn)
 		{
-			buffer[_length_buffer++] = (char)c;
-			c = this->timeRead();
+			char buffer[256];
+			int c = this->timeRead();
+			char _length_buffer = 0;
+			while (c >= 0)
+			{
+				buffer[_length_buffer++] = (char)c;
+				c = this->timeRead();
+			}
+			memcpy((void *)des, (const void *)buffer, (size_t)(_length_buffer - 1));
 		}
-		memcpy((void *)des, (const void *)buffer, (size_t)(_length_buffer - 1));
+		//
+
+		//
 		return true;
 		//
 		break;
@@ -102,15 +107,24 @@ bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t le
 	{
 		this->swrSerial->write(source, length);
 		//
-		char buffer[256];
-		int c = this->timeRead();
-		char _length_buffer = 0;
-		while (c >= 0)
+		if (useReturn)
 		{
-			buffer[_length_buffer++] = (char)c;
-			c = this->timeRead();
+			char buffer[256];
+			int c = this->timeRead();
+			char _length_buffer = 0;
+			while (c >= 0)
+			{
+				buffer[_length_buffer++] = (char)c;
+				c = this->timeRead();
+			}
+			memcpy((void *)des, (const void *)buffer, (size_t)(_length_buffer - 1));
 		}
-		memcpy((void *)des, (const void *)buffer, (size_t)(_length_buffer - 1));
+		//
+		// for (uint8_t i = 0; i <= _length_buffer - 1; i++)
+		// {
+		// 	Serial.println(buffer[i], HEX);
+		// }
+		//
 		return true;
 		//
 		break;
@@ -173,7 +187,7 @@ bool EziMotionPlusR::initServo()
 	}
 	return false;
 }
-char EziMotionPlusR::ServoEnable(uint8_t iSlaveNo, bool state)
+char EziMotionPlusR::ServoEnable(uint8_t iSlaveNo, bool state, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(4 + 6);
 	buffer[0] = iSlaveNo;
@@ -187,9 +201,15 @@ char EziMotionPlusR::ServoEnable(uint8_t iSlaveNo, bool state)
 	//---Send data encoded to servo and wait respond
 	//
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6), useReturn);
 	free(buffer);
 
+	////////////////////////////////
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 	//buffer = (char*)malloc(6 + 4);
 	//
 	//recive
@@ -205,11 +225,12 @@ char EziMotionPlusR::ServoEnable(uint8_t iSlaveNo, bool state)
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
 	free(buffer_respond);
 	free(buffer_out);
+
 	return data;
 	//if (data == CommIsNormal)
 	//check if data is
 }
-char EziMotionPlusR::ServoAlarmReset(uint8_t iSlaveNo)
+char EziMotionPlusR::ServoAlarmReset(uint8_t iSlaveNo, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 6);
 	buffer[0] = iSlaveNo;
@@ -218,8 +239,14 @@ char EziMotionPlusR::ServoAlarmReset(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
@@ -230,7 +257,7 @@ char EziMotionPlusR::ServoAlarmReset(uint8_t iSlaveNo)
 	free(buffer_out);
 	return data;
 }
-char EziMotionPlusR::MoveStop(uint8_t iSlaveNo)
+char EziMotionPlusR::MoveStop(uint8_t iSlaveNo, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 6);
 	buffer[0] = iSlaveNo;
@@ -239,8 +266,14 @@ char EziMotionPlusR::MoveStop(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
@@ -252,7 +285,7 @@ char EziMotionPlusR::MoveStop(uint8_t iSlaveNo)
 	return data;
 }
 
-char EziMotionPlusR::EmergencyStop(uint8_t iSlaveNo)
+char EziMotionPlusR::EmergencyStop(uint8_t iSlaveNo, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 6);
 	buffer[0] = iSlaveNo;
@@ -261,8 +294,14 @@ char EziMotionPlusR::EmergencyStop(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
@@ -273,7 +312,7 @@ char EziMotionPlusR::EmergencyStop(uint8_t iSlaveNo)
 	free(buffer_out);
 	return data;
 }
-char EziMotionPlusR::MoveOriginSingleAxis(uint8_t iSlaveNo)
+char EziMotionPlusR::MoveOriginSingleAxis(uint8_t iSlaveNo, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 6);
 	buffer[0] = iSlaveNo;
@@ -282,8 +321,14 @@ char EziMotionPlusR::MoveOriginSingleAxis(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
@@ -295,7 +340,7 @@ char EziMotionPlusR::MoveOriginSingleAxis(uint8_t iSlaveNo)
 	return data;
 }
 
-char EziMotionPlusR::MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps)
+char EziMotionPlusR::MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 8 + 6);
 	buffer[0] = iSlaveNo;
@@ -325,8 +370,14 @@ char EziMotionPlusR::MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
@@ -338,7 +389,7 @@ char EziMotionPlusR::MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint
 	return data;
 }
 
-char EziMotionPlusR::MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps)
+char EziMotionPlusR::MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint32_t speed_pps, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 8 + 6);
 	buffer[0] = iSlaveNo;
@@ -368,8 +419,14 @@ char EziMotionPlusR::MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
@@ -381,7 +438,7 @@ char EziMotionPlusR::MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint
 	return data;
 }
 
-char EziMotionPlusR::MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog_dir)
+char EziMotionPlusR::MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog_dir, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 5 + 6);
 	buffer[0] = iSlaveNo;
@@ -407,8 +464,14 @@ char EziMotionPlusR::MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
@@ -444,7 +507,7 @@ char EziMotionPlusR::GetCommandPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt)
 	return data;
 }
 
-char EziMotionPlusR::SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
+char EziMotionPlusR::SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 4 + 6);
 	buffer[0] = iSlaveNo;
@@ -457,8 +520,14 @@ char EziMotionPlusR::SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
 	this->encode(buffer, (const char *)buffer, 3 + 4);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 4 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 4 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
@@ -494,7 +563,7 @@ char EziMotionPlusR::GetActualPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt)
 	return data;
 }
 
-char EziMotionPlusR::SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
+char EziMotionPlusR::SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 4 + 6);
 	buffer[0] = iSlaveNo;
@@ -507,8 +576,14 @@ char EziMotionPlusR::SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
 	this->encode(buffer, (const char *)buffer, 3 + 4);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 4 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 4 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
@@ -520,7 +595,7 @@ char EziMotionPlusR::SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
 	return data;
 }
 
-char EziMotionPlusR::ClearPosition(uint8_t iSlaveNo)
+char EziMotionPlusR::ClearPosition(uint8_t iSlaveNo, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 6);
 	buffer[0] = iSlaveNo;
@@ -529,8 +604,14 @@ char EziMotionPlusR::ClearPosition(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6), useReturn);
 	free(buffer);
+
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
 
 	char *buffer_out = (char *)malloc(4);
 	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
@@ -542,7 +623,7 @@ char EziMotionPlusR::ClearPosition(uint8_t iSlaveNo)
 	return data;
 }
 
-char EziMotionPlusR::SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t data_para)
+char EziMotionPlusR::SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t data_para, bool useReturn = true)
 {
 	char *buffer = (char *)malloc(3 + 5 + 6);
 	buffer[0] = iSlaveNo;
@@ -568,17 +649,36 @@ char EziMotionPlusR::SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t da
 	// 	Serial.println(buffer[i], HEX);
 	// }
 
-	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6));
+	char *buffer_respond = (char *)malloc(4);
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6), useReturn);
 	free(buffer);
 
+	if (!useReturn)
+	{
+		free(buffer_respond);
+		return CommIsNormal;
+	}
+
+	// Serial.println("testaaaa::aa");
+	// for(int8_t i = 0; i < 14; i++)
+	// {
+	// 	Serial.println(buffer_respond[i], HEX);
+	// }
+
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(6 + 4));
+
+	// Serial.println("test thu:::::");
+	// for(uint8_t i = 0; i < 14; i++)
+	// {
+	// 	Serial.println(buffer_out[i], HEX);
+	// }
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
 	free(buffer_respond);
 	free(buffer_out);
+
 	return data;
 }
 
@@ -591,6 +691,30 @@ char EziMotionPlusR::GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *d
 	buffer[3] = (char)para_num;
 
 	this->encode(buffer, (const char *)buffer, 4);
+
+	char *buffer_respond = (char *)malloc(4 + 4 + 6);
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6));
+	free(buffer);
+
+	char *buffer_out = (char *)malloc(4 + 4);
+	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+
+	char data;
+	memcpy((void *)data_para, (const void *)&buffer_out[4], 4);
+	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
+	free(buffer_respond);
+	free(buffer_out);
+	return data;
+}
+
+char EziMotionPlusR::GetAxisStatus(uint8_t iSlaveNo, int32_t *data_para)
+{
+	char *buffer = (char *)malloc(3 + 5 + 6);
+	buffer[0] = iSlaveNo;
+	buffer[1] = this->value_random++;
+	buffer[2] = FAS_GetAxisStatus;
+
+	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 4 + 6);
 	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
@@ -606,4 +730,3 @@ char EziMotionPlusR::GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *d
 	free(buffer_out);
 	return data;
 }
-

@@ -104,6 +104,11 @@
 #define Para_Boost_Current			38
 //
 
+//FFLAG_define
+
+#define FFLAG_MOTIONING 0x08000000
+
+
 enum AlarmType
 {
 	No_Alarm = 0,

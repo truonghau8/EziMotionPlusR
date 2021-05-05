@@ -1,13 +1,11 @@
-//This library was written by Hau Truong
-//E-mail: truonghau8@gmail.com
-//github: https://github.com/truonghau8/
+/* Maintainer: Indruino */
 
 #ifndef _EZIMOTIONPLUS_H
 #define _EZIMOTIONPLUS_H
 
 //#include <iostream>
 #include "Arduino.h"
-#include "SoftwareSerial.h"
+//#include "SoftwareSerial.h"
 #include "CRC_cal.h"
 #include "CommStatusEziMotion.h"
 #include "Motion_frame_define.h"
@@ -33,7 +31,7 @@ class EziMotionPlusR
 		//choose serial
 		uint8_t device_model;
 		HardwareSerial *hwrSerial;
-		SoftwareSerial *swrSerial;
+		//SoftwareSerial *swrSerial;
 		//choose serial
 		int32_t dwbaud = 0;
 		//uint8_t iSlaveNo = 0;
@@ -47,17 +45,19 @@ class EziMotionPlusR
 		//source = slave_No + code_id_random + code_function + [data_function]
 		//
 		unsigned long _startMillis;
-		const unsigned short _timeout = 1000;
+		const unsigned short _timeout = 3;
 
+		//bool flag_timeout_PDU = false;
 
 		bool encode(char *des, const char *source, const uint8_t length); //encode_buffer //da test
 		bool decode(char *des, const char *source, const uint8_t length); //decode_buffer //da test
 		bool processData(char *des, const char *source, const uint8_t length); //send data and after that it wait the data respond
+		bool processData(char *des, const char *source, const uint8_t length, const uint8_t length_des); //send data and after that it wait the data respond
 		bool checkCRC(char *source, const uint8_t length); //encode_buffer
 		int timeRead();
 	public:
 		EziMotionPlusR(HardwareSerial& uart_ttl,int32_t dwbaud);
-		EziMotionPlusR(SoftwareSerial& uart_ttl,int32_t dwbaud);
+		//EziMotionPlusR(SoftwareSerial& uart_ttl,int32_t dwbaud);
 		~EziMotionPlusR();
 		bool initServo();
 		char ServoEnable(uint8_t iSlaveNo, bool state); //da test
@@ -75,6 +75,9 @@ class EziMotionPlusR
 		char ClearPosition(uint8_t iSlaveNo);
 		char SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t data_para);
 		char GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *data_para);
+
+		char VelocityOverride(uint8_t iSlaveNo, uint32_t new_speed_cmd);
+		//bool check_timeout_PDU();
 		//
 		//set para -Acel time -- Decl time
 		//

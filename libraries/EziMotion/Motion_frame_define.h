@@ -17,7 +17,7 @@
 #define FAS_TriggerOutput_Status	0x28
 #define FAS_ServoEnable				0x2A //function
 #define FAS_ServoAlarmReset			0x2B //function
-#define FAS_ServoAlarmtype			0x2E 
+#define FAS_ServoAlarmtype			0x2E //need function
 #define FAS_MoveStop                0x31 //function
 #define FAS_EmergencyStop           0x32 //function
 #define FAS_MoveOriginSingleAxis    0x33 //function
@@ -33,8 +33,8 @@
 #define FAS_MoveOriginSingleAxis    0x3D
 #define FAS_SingleAxisAbsPos        0x3E
 #define FAS_AllSingleAxisIncPos     0x3F
-#define FAS_MoveSingleAxisAbsPosEx	0x80 //need function
-#define FAS_MoveSingleAxisIncPosEx	0x81 //need function
+#define FAS_MoveSingleAxisAbsPosEx	0x80 //function
+#define FAS_MoveSingleAxisIncPosEx	0x81 //function
 #define FAS_MoveVelocityEX			0x82
 #define FAS_GetAxisStatus			0x40 //function
 #define FAS_GetIOAxisStatus			0x41 //function
@@ -57,52 +57,6 @@
 #define FAS_PosTableWriteOneItem	0x6B
 #define FAS_MovePush				0x78
 #define FAS_GetPushStatus			0x79
-#define FAS_SetParameter 			0x12
-#define FAS_GetParameter 			0x13
-
-
-
-//parameter table
-#define Para_Pulse_per_Revolution 	0x00
-#define Para_Axis_Max_Speed 		0x01
-#define Para_Axis_Start_Speed		0x02
-#define Para_Axis_Acc_Time			0x03
-#define Para_Axis_Dec_Time 			0x04
-#define Para_Speed_Override			0x05
-#define Para_Jog_Speed				0x06
-#define Para_Jog_Start_Speed		0x07
-#define Para_Jog_Acc_Dec_Time		0x08
-#define Para_Servo_Alarm_Logic		0x09
-#define Para_Servo_On_Logic			0x0A
-#define Para_Servo_Alarm_Reset_Logic 11
-#define Para_SW_Limit_Plus_Value	12
-#define Para_SW_Limit_Minus_Value 	13
-#define Para_SW_Limit_Stop_Method	14
-#define Para_HW_Limit_Stop_Method	15
-#define Para_Limit_Sensor_Logic		16
-#define Para_Org_Speed				17
-#define Para_Org_Search_Speed		18
-#define Para_Org_Acc_Dec_Time		19
-#define Para_Org_Method				20
-#define Para_Org_Dir				21
-#define Para_Org_Offset				22
-#define Para_Org_Position_Set		23
-#define Para_Org_Sensor_Logic		24
-#define Para_Position_Loop_Gain		25
-#define Para_Inpos_Value			26
-#define Para_Pos_Tracking_Limit		27
-#define Para_Motion_Dir				28
-#define Para_Limit_Sensor_Dir		29
-#define Para_Org_Torque_Ratio		30
-#define Para_Pos_err_overflow_Limit	31
-#define Para_Pos_val_counting_method	32
-#define Para_Servo_on_method		33
-#define Para_Brake_delay_time		34
-#define Para_reserved				35
-#define Para_Run_Current			36
-#define Para_Stop_Current			37
-#define Para_Boost_Current			38
-//
 
 enum AlarmType
 {

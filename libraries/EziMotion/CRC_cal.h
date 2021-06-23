@@ -1,24 +1,3 @@
-//==============================================================================
-// System Name:  	
-//
-// File Name:		CRC_Checksum.c
-//
-// Description:	CRC calculation function 
-//          		 
-//
-// Originator:		
-//
-//###########################################################################
-//
-//  Ver | dd mmmm yyyy | Who  | Description of changes
-// =====|==============|======|===============================================
-//  0.01| xx xxxx xxxx | A.A. | 
-//  0.02| 25 June 2009 | JH   | added CRC computation by algorithm.
-//  0.03| 25 June 2009 | JH   | changed CRC computation by table to 2bytes base.
-//###########################################################################
-
-/* Table Of CRC Values */
-
 
 #ifndef _CRC_CAL_
 #define _CRC_CAL_

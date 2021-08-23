@@ -44,6 +44,10 @@ bool EziMotionPlusR::decode(char *des, const char *source, const uint8_t length)
 				free(buffer);
 				return true;
 			}
+			else
+			{
+				free(buffer);//moi fix
+			}
 		}
 	}
 	return false;
@@ -59,15 +63,13 @@ int EziMotionPlusR::timeRead()
 		{
 			c = this->hwrSerial->read(); /* code */
 		}
-		if (this->device_model == _SoftwareSerial)
-		{
-			c = this->swrSerial->read();
-		}
 		if (c >= 0)
 			return c;
 	} while (millis() - _startMillis < _timeout);
 	return -1; // -1 indicates timeout
 }
+
+
 
 bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t length)
 {
@@ -92,16 +94,51 @@ bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t le
 		{
 			buffer[_length_buffer++] = (char)c;
 			c = this->timeRead();
+
 		}
 		memcpy((void *)des, (const void *)buffer, (size_t)(_length_buffer - 1));
 		return true;
 		//
 		break;
 	}
-	case _SoftwareSerial:
+	default:
+		break;
+	}
+	return false;
+}
+bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t length, const uint8_t length_des)
+{
+	if (length <= 6)
+		return false;
+	if (des == nullptr)
+		return false;
+	if (source == nullptr)
+		return false;
+
+	switch (this->device_model)
 	{
-		this->swrSerial->write(source, length);
+	case _HardwareSerial:
+	{
+		uint8_t length_written = 0;
+		unsigned long last_time_write = millis();
+		do
+		{
+			length_written = (uint8_t)this->hwrSerial->write(source, length);
+			if (millis() - last_time_write > 1000)
+			{
+				return false;
+				//break;
+			}
+		} while (length_written < length);
+
+		float time_delay = (float)((1.0/this->dwbaud)*(length + length_des)*8*1000000)*2.0;
+		// Serial.println();
+		// Serial.println(time_delay);
+
+		delayMicroseconds(time_delay);
 		//
+		//Serial.println(source);
+
 		char buffer[256];
 		int c = this->timeRead();
 		char _length_buffer = 0;
@@ -109,8 +146,12 @@ bool EziMotionPlusR::processData(char *des, const char *source, const uint8_t le
 		{
 			buffer[_length_buffer++] = (char)c;
 			c = this->timeRead();
+			if(_length_buffer >255)
+			{
+				break;
+			}
 		}
-		memcpy((void *)des, (const void *)buffer, (size_t)(_length_buffer - 1));
+		memcpy((void *)des, (const void *)buffer, length_des);
 		return true;
 		//
 		break;
@@ -141,13 +182,6 @@ EziMotionPlusR::EziMotionPlusR(HardwareSerial &uart_ttl, int32_t dwbaud)
 	this->dwbaud = dwbaud;
 	//this->iSlaveNo = iSlaveNo;
 }
-EziMotionPlusR::EziMotionPlusR(SoftwareSerial &uart_ttl, int32_t dwbaud)
-{
-	this->swrSerial = &uart_ttl;
-	this->device_model = _SoftwareSerial;
-	this->dwbaud = dwbaud;
-	//this->iSlaveNo = iSlaveNo;
-}
 
 EziMotionPlusR::~EziMotionPlusR()
 {
@@ -160,12 +194,6 @@ bool EziMotionPlusR::initServo()
 		this->hwrSerial->begin((unsigned long)this->dwbaud);
 		delay(50);
 		if (this->hwrSerial)
-			return true;
-		break;
-	case _SoftwareSerial:
-		this->swrSerial->begin((unsigned long)this->dwbaud);
-		delay(50);
-		if (this->swrSerial)
 			return true;
 		break;
 	default:
@@ -187,7 +215,7 @@ char EziMotionPlusR::ServoEnable(uint8_t iSlaveNo, bool state)
 	//---Send data encoded to servo and wait respond
 	//
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6), 10);
 	free(buffer);
 
 	//buffer = (char*)malloc(6 + 4);
@@ -199,8 +227,16 @@ char EziMotionPlusR::ServoEnable(uint8_t iSlaveNo, bool state)
 	//
 	//decode
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
 	//
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
+
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
 	free(buffer_respond);
@@ -218,11 +254,19 @@ char EziMotionPlusR::ServoAlarmReset(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -239,11 +283,20 @@ char EziMotionPlusR::MoveStop(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+	bool result = false;
+
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -261,11 +314,19 @@ char EziMotionPlusR::EmergencyStop(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -282,11 +343,21 @@ char EziMotionPlusR::MoveOriginSingleAxis(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+
+	bool result = false;
+
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -325,11 +396,20 @@ char EziMotionPlusR::MoveSingleAxisAbsPos(uint8_t iSlaveNo, int32_t posVal, uint
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
+	bool result = false;
+
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -368,11 +448,20 @@ char EziMotionPlusR::MoveSingleAxisIncPos(uint8_t iSlaveNo, int32_t posVal, uint
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 8 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
+	bool result = false;
+
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -407,11 +496,20 @@ char EziMotionPlusR::MoveVelocity(uint8_t iSlaveNo, uint32_t speed_pps, bool jog
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6), (const uint8_t)10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
+	bool result = false;
+
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(4 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -430,11 +528,19 @@ char EziMotionPlusR::GetCommandPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 14);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4 + 4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)cmdPosValueRt, (const void *)&buffer_out[4], 4);
@@ -461,7 +567,15 @@ char EziMotionPlusR::SetCommandPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -480,12 +594,19 @@ char EziMotionPlusR::GetActualPos(uint8_t iSlaveNo, int32_t *cmdPosValueRt)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 14);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4 + 4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
-
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+	if (!result)
+	{
+		//Serial.println("err data");
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 	char data;
 	memcpy((void *)cmdPosValueRt, (const void *)&buffer_out[4], 4);
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -511,7 +632,15 @@ char EziMotionPlusR::SetActualPos(uint8_t iSlaveNo, int32_t cmdPosValueRt)
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -529,11 +658,19 @@ char EziMotionPlusR::ClearPosition(uint8_t iSlaveNo)
 	this->encode(buffer, (const char *)buffer, 3);
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(4 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)10);
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -569,11 +706,19 @@ char EziMotionPlusR::SetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t da
 	// }
 
 	char *buffer_respond = (char *)malloc(4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 5 + 6), 10);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
@@ -593,11 +738,20 @@ char EziMotionPlusR::GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *d
 	this->encode(buffer, (const char *)buffer, 4);
 
 	char *buffer_respond = (char *)malloc(4 + 4 + 6);
-	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6));
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 14);
 	free(buffer);
 
 	char *buffer_out = (char *)malloc(4 + 4);
-	this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+	bool result = false;
+
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
 
 	char data;
 	memcpy((void *)data_para, (const void *)&buffer_out[4], 4);
@@ -607,3 +761,69 @@ char EziMotionPlusR::GetParameter(uint8_t iSlaveNo, uint8_t para_num, int32_t *d
 	return data;
 }
 
+char EziMotionPlusR::VelocityOverride(uint8_t iSlaveNo, uint32_t new_speed_cmd)
+{
+	char *buffer = (char *)malloc(3 + 4 + 6);
+	buffer[0] = iSlaveNo;
+	buffer[1] = this->value_random++;
+	buffer[2] = FAS_VelocityOverride;
+	buffer[3] = (char)new_speed_cmd;
+	buffer[4] = (char)(new_speed_cmd >> 8);
+	buffer[5] = (char)(new_speed_cmd >> 16);
+	buffer[6] = (char)(new_speed_cmd >> 24);
+	this->encode(buffer, (const char *)buffer, 3 + 4);
+
+	char *buffer_respond = (char *)malloc(4 + 6);
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 4 + 6), 10);
+	free(buffer);
+
+	char *buffer_out = (char *)malloc(4);
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 1 + 6));
+
+	if (!result)
+	{
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
+
+	char data;
+	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
+	free(buffer_respond);
+	free(buffer_out);
+	return data;
+}
+
+char EziMotionPlusR::GetIOOutput(uint8_t iSlaveNo, int32_t *data_para)
+{	
+
+	char *buffer = (char *)malloc(3 + 5 + 6);
+	buffer[0] = iSlaveNo;
+	buffer[1] = this->value_random++;
+	buffer[2] = FAS_GetIOOutput;
+
+	this->encode(buffer, (const char *)buffer, 3);
+
+	char *buffer_respond = (char *)malloc(4 + 4 + 6);
+	this->processData(buffer_respond, (const char *)buffer, (const uint8_t)(3 + 6), 14);
+	free(buffer);
+
+	char *buffer_out = (char *)malloc(4 + 4);
+	bool result = false;
+	result = this->decode(buffer_out, (const char *)buffer_respond, (const uint8_t)(3 + 5 + 6));
+
+	if (!result)
+	{
+		//Serial.println("err data");
+		free(buffer_respond);
+		free(buffer_out);
+		return CRC_err;
+	}
+	char data;
+	memcpy((void *)data_para, (const void *)&buffer_out[4], 4);
+	memcpy((void *)&data, (const void *)&buffer_out[3], 1);
+	free(buffer_respond);
+	free(buffer_out);
+	return data;
+}
